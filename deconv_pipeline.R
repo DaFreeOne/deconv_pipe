@@ -17,7 +17,8 @@ if (is.na(default_cores)) default_cores = 2L
 default_cores = max(1L, default_cores - 4L)
 
 option_list = list(
-  make_option("--rnaseq_dir", type = "character"),
+  make_option("--bulk_counts", type = "character"),
+  make_option("--bulk_TPM", type = "character"),
   make_option("--clinic_dir", type = "character"),
   make_option("--clinic_file", type = "character"),
   make_option("--single_cell_rds", type = "character"),
@@ -70,7 +71,7 @@ message("Methods: ", opt$deconv_methods)
 deconv_to_use = parse_csv_arg(opt$deconv_methods)
 ncores = as.integer(opt$ncores)
 
-stopifnot(dir.exists(opt$rnaseq_dir))
+stopifnot(dir.exists(opt$bulk_counts) |dir.exists(opt$bulk_TPM))
 stopifnot(dir.exists(opt$clinic_dir))
 stopifnot(file.exists(opt$single_cell_rds))
 
@@ -80,7 +81,8 @@ dir.create(opt$output_dir, recursive = TRUE, showWarnings = FALSE)
 # Save run config
 jsonlite::write_json(
   list(
-    rnaseq_dir = opt$rnaseq_dir,
+    bulk_counts = opt$bulk_counts,
+    bulk_TPM = opt$bulk_TPM,
     clinic_dir = opt$clinic_dir,
     clinic_file = opt$clinic_file,
     single_cell_rds = opt$single_cell_rds,
@@ -101,7 +103,8 @@ jsonlite::write_json(
 )
 
 # Inputs
-RNAseq_folderpath = opt$rnaseq_dir
+RNAseq_TPM_path = opt$bulk_TPM
+RNAseq_counts_path = opt$bulk_counts
 clinic_annot_dir = opt$clinic_dir
 clinic_annot_filename = opt$clinic_file
 single_cell_object_path = opt$single_cell_rds
@@ -113,7 +116,7 @@ output_dir = opt$output_dir
 message("Reading bulk and clinic files")
 if ("DWLS" %in% deconv_to_use | "MuSiC" %in% deconv_to_use) {
   RNAseq_TPM = read.csv(
-    file.path(RNAseq_folderpath, "RNAseq_TPM.csv"),
+    file.path(RNAseq_TPM_path),
     row.names = 1,
     check.names = FALSE
   )
@@ -121,7 +124,7 @@ if ("DWLS" %in% deconv_to_use | "MuSiC" %in% deconv_to_use) {
 
 if ("CDSeq" %in% deconv_to_use) {
   RNAseq_counts = read.csv(
-    file.path(RNAseq_folderpath, "RNAseq_counts.csv"),
+    file.path(RNAseq_counts_path),
     row.names = 1,
     check.names = FALSE
   )

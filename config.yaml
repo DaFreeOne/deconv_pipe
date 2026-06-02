@@ -6,11 +6,12 @@
 #   ./run_pipeline.sh run   config.yaml   # run the pipeline
 # ============================================================================
 
-image_name: predimel-deconv:latest
+image_name: deconv_pipe:latest
 
 # Host paths (mounted into the container by run_pipeline.sh)
 paths:
-  rnaseq_dir:      /mnt/d/PREDIMEL/00_Merged_data/02_BULK/00_Unfiltered
+  bulk_counts:     /mnt/d/PREDIMEL/00_Merged_data/02_BULK/00_Unfiltered
+  bulk_TPM:        /mnt/d/PREDIMEL/00_Merged_data/02_BULK/00_Unfiltered
   clinic_dir:      /mnt/d/PREDIMEL/00_Merged_data/01_CLINIC
   single_cell_rds: /home/quentin/00_DATASETS/02_SingleCell/01_MELANOMA/GSE269936/GSE269936_ref_melan_sc.rds
   signatures_dir:  /home/quentin/69_DOCKERS/OUTPUTS/SIGNATURES

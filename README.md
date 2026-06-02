@@ -1,8 +1,11 @@
 To build the docker, run : 
 > chmod +x run_pipeline.sh
 > ./run_pipeline.sh build config.yaml
+
 or the classic : 
 > docker build . blablabla
+
+
 
 To run the docker, run :
 > ./run_pipeline.sh run config.yaml

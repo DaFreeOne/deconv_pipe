@@ -45,7 +45,8 @@ PY
 
 IMAGE_NAME="$(read_yaml image_name)"
 
-HOST_RNASEQ_DIR="$(read_yaml paths.rnaseq_dir)"
+HOST_BULK_COUNTS_DIR="$(read_yaml paths.bulk_counts)"
+HOST_BULK_TPM_DIR="$(read_yaml paths.bulk_TPM)"
 HOST_CLINIC_DIR="$(read_yaml paths.clinic_dir)"
 HOST_SINGLE_CELL_RDS="$(read_yaml paths.single_cell_rds)"
 HOST_SIGNATURES_DIR="$(read_yaml paths.signatures_dir)"
@@ -63,14 +64,16 @@ DOWNSAMPLING_METHOD="$(read_yaml parameters.downsampling_method)"
 NCORES="$(read_yaml parameters.ncores)"
 SEED="$(read_yaml parameters.seed)"
 
-CONTAINER_RNASEQ_DIR="/data/rnaseq"
+CONTAINER_BULK_COUNTS_DIR="/data/bulk_counts"
+CONTAINER_BULK_TPM_DIR="/data/bulk_TPM"
 CONTAINER_CLINIC_DIR="/data/clinic"
 CONTAINER_SC_DIR="/data/sc"
 CONTAINER_SIGNATURES_DIR="/work/signatures"
 CONTAINER_OUTPUT_DIR="/work/output"
 
 check_paths() {
-  [ -d "$HOST_RNASEQ_DIR" ]      || { echo "Missing rnaseq_dir: $HOST_RNASEQ_DIR"; exit 1; }
+  [ -d "$HOST_BULK_COUNTS_DIR" ]      || { echo "Missing bulk_counts dir: $HOST_BULK_COUNTS_DIR"; exit 1; }
+  [ -d "$HOST_BULK_TPM_DIR" ]      || { echo "Missing bulk_TPM dir: $HOST_BULK_TPM_DIR"; exit 1; }
   [ -d "$HOST_CLINIC_DIR" ]      || { echo "Missing clinic_dir: $HOST_CLINIC_DIR"; exit 1; }
   [ -f "$HOST_SINGLE_CELL_RDS" ] || { echo "Missing single_cell_rds: $HOST_SINGLE_CELL_RDS"; exit 1; }
 
@@ -87,17 +90,41 @@ build_image() {
   docker build --pull -t "$IMAGE_NAME" -f DockerFile .
 }
 
+run_preanalysis() {
+  [ -f "$HOST_SINGLE_CELL_RDS" ] || { echo "Missing single_cell_rds: $HOST_SINGLE_CELL_RDS"; exit 1; }
+  mkdir -p "$HOST_OUTPUT_DIR"
+
+  # Mount the project dir so preanalysis.R runs from the existing image
+  # (no rebuild needed); override the entrypoint to call Rscript directly.
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+  docker run --rm \
+    -v "$(dirname "$HOST_SINGLE_CELL_RDS"):$CONTAINER_SC_DIR:ro" \
+    -v "$HOST_OUTPUT_DIR:$CONTAINER_OUTPUT_DIR" \
+    -v "$SCRIPT_DIR:/pipeline:ro" \
+    --entrypoint Rscript \
+    "$IMAGE_NAME" /pipeline/preanalysis.R \
+    --single_cell_rds "$CONTAINER_SC_DIR/$(basename "$HOST_SINGLE_CELL_RDS")" \
+    --celltype_col "$CELLTYPE_COL" \
+    --patient_col "$PATIENT_COL" \
+    --gse_id "$GSE_ID" \
+    --current_cap "$DOWNSAMPLE_N_CELLS" \
+    --output_dir "$CONTAINER_OUTPUT_DIR"
+}
+
 run_container() {
   check_paths
 
   docker run --rm -it \
-    -v "$HOST_RNASEQ_DIR:$CONTAINER_RNASEQ_DIR:ro" \
+    -v "$HOST_BULK_COUNTS_DIR:$CONTAINER_BULK_COUNTS_DIR:ro" \
+    -v "$HOST_BULK_TPM_DIR:$CONTAINER_BULK_TPM_DIR:ro" \
     -v "$HOST_CLINIC_DIR:$CONTAINER_CLINIC_DIR:ro" \
     -v "$(dirname "$HOST_SINGLE_CELL_RDS"):$CONTAINER_SC_DIR:ro" \
     -v "$HOST_SIGNATURES_DIR:$CONTAINER_SIGNATURES_DIR" \
     -v "$HOST_OUTPUT_DIR:$CONTAINER_OUTPUT_DIR" \
     "$IMAGE_NAME" \
-    --rnaseq_dir "$CONTAINER_RNASEQ_DIR" \
+    --bulk_counts "$CONTAINER_BULK_COUNTS_DIR" \
+    --bulk_TPM "$CONTAINER_BULK_TPM_DIR" \
     --clinic_dir "$CONTAINER_CLINIC_DIR" \
     --clinic_file "$CLINIC_FILE" \
     --single_cell_rds "$CONTAINER_SC_DIR/$(basename "$HOST_SINGLE_CELL_RDS")" \
@@ -121,12 +148,15 @@ case "$MODE" in
   run)
     run_container
     ;;
+  preanalysis)
+    run_preanalysis
+    ;;
   all)
     build_image
     run_container
     ;;
   *)
-    echo "Usage: $0 [build|run|all] [config.yaml]"
+    echo "Usage: $0 [build|run|preanalysis|all] [config.yaml]"
     exit 1
     ;;
 esac
