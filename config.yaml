@@ -1,0 +1,46 @@
+# ============================================================================
+# PREDIMEL deconvolution pipeline - configuration
+# ----------------------------------------------------------------------------
+# Edit this file, then run:
+#   ./run_pipeline.sh build config.yaml   # build the Docker image
+#   ./run_pipeline.sh run   config.yaml   # run the pipeline
+# ============================================================================
+
+image_name: predimel-deconv:latest
+
+# Host paths (mounted into the container by run_pipeline.sh)
+paths:
+  rnaseq_dir:      /mnt/d/PREDIMEL/00_Merged_data/02_BULK/00_Unfiltered
+  clinic_dir:      /mnt/d/PREDIMEL/00_Merged_data/01_CLINIC
+  single_cell_rds: /home/quentin/00_DATASETS/02_SingleCell/01_MELANOMA/GSE269936/GSE269936_ref_melan_sc.rds
+  signatures_dir:  /home/quentin/69_DOCKERS/OUTPUTS/SIGNATURES
+  output_dir:      /home/quentin/69_DOCKERS/OUTPUTS/RESULTS
+
+inputs:
+  clinic_file: clinic_merged_riboZ_muscSS.csv
+  gse_id:      GSE269936
+
+parameters:
+  # Deconvolution method(s). Comma-separated for several, e.g. "DWLS,MuSiC".
+  # Supported: DWLS, MuSiC, CDSeq
+  deconv_methods: DWLS
+
+  # DWLS signature builder: "mast_optimized" or "seurat"
+  dwls_method: mast_optimized
+
+  # Metadata columns in the single-cell .rds object
+  celltype_col: cell_type
+  patient_col:  patient
+
+  # --- Reference downsampling -------------------------------------------------
+  # downsampling_method: how cells are grouped before the per-group cap.
+  #   "patientxcelltype" -> cap each (patient x cell_type) bucket (balanced ref)
+  #   (NB: this is the only value currently implemented in deconv_pipeline.R)
+  # downsample_n_cells: max cells kept per group (groups with fewer are kept
+  #   whole). NOT a global total: effective cells/celltype ~= n_groups * this.
+  #   ~40 is a fast smoke-test value; 100-200 gives more stable signatures.
+  downsample_n_cells: 40
+  downsampling_method: patientxcelltype
+
+  ncores: 4
+  seed:   1984

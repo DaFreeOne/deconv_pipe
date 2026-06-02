@@ -1,0 +1,53 @@
+FROM rocker/r-ver:4.4.3
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gfortran \
+    cmake \
+    git \
+    pkg-config \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    libxml2-dev \
+    libfontconfig1-dev \
+    libfreetype6-dev \
+    libpng-dev \
+    libtiff5-dev \
+    libjpeg-dev \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    libblas-dev \
+    liblapack-dev \
+    libhdf5-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN R -q -e "install.packages(c('pak','BiocManager','remotes'), repos='https://cloud.r-project.org')"
+
+RUN R -q -e "install.packages(c('optparse','tidyestimate','jsonlite','data.table','Seurat', 'Matrix'), repos='https://cloud.r-project.org', Ncpus=max(1, parallel::detectCores()-1))" &&\
+    R -q -e "library(optparse); library(tidyestimate); library(Seurat); library(jsonlite); library(data.table); library(Matrix)"
+            
+RUN R -q -e "BiocManager::install('org.Hs.eg.db', ask=FALSE, update=FALSE)" &&\
+    R -q -e "library(org.Hs.eg.db)"
+
+RUN R -q -e "remotes::install_github('ebecht/MCPcounter', subdir='Source', upgrade='never', dependencies=FALSE)" &&\
+    R -q -e "library(MCPcounter)"
+
+# Installation du coeur d'Omnideconv
+RUN R -q -e "pak::pkg_install('omnideconv/omnideconv')" &&\
+    R -q -e "library(omnideconv)"
+
+# Installation des méthodes de déconvolution souhaitées
+RUN R -q -e "remotes::install_github('omnideconv/DWLS',  upgrade='never', dependencies=NA, build_vignettes=FALSE)"
+RUN R -q -e "remotes::install_github('omnideconv/MuSiC', upgrade='never', dependencies=NA, build_vignettes=FALSE)"
+RUN R -q -e "remotes::install_github('omnideconv/CDSeq', upgrade='never', dependencies=NA, build_vignettes=FALSE)"
+
+# Test si toutes les libs sont bien installées 
+RUN R -q -e "library(optparse); library(tidyestimate); library(MCPcounter); library(omnideconv); library(org.Hs.eg.db); library(Seurat); library(jsonlite); library(data.table); library(Matrix); cat('Docker image OK\\n')"
+
+WORKDIR /app
+COPY deconv_pipeline.R /app/deconv_pipeline.R
+
+ENTRYPOINT ["Rscript", "/app/deconv_pipeline.R"]
