@@ -1,5 +1,5 @@
 # =============================================================================
-# Conda / Bioconda based image.
+# Conda-forge / Bioconda based image (conda only - no mamba), pinned to R 4.4.3.
 #
 # The heavy R + Bioconductor stack (Seurat, fs, org.Hs.eg.db, MAST, ...) is
 # installed as PRECOMPILED conda binaries from conda-forge + bioconda. This
@@ -9,21 +9,22 @@
 # Only the packages that are NOT on conda (tidyestimate from CRAN, and the
 # GitHub-only deconvolution backends) are still built from source - but now
 # they compile inside the conda env, against already-installed binary deps,
-# using conda's own compiler toolchain (the `mamba run -n deconv` steps).
+# using conda's own compiler toolchain (the `conda run -n deconv` steps).
 #
 # If a later step ever reports another missing package, add the matching
 # conda package (`r-<name>` from conda-forge, `bioconductor-<name>` from
-# bioconda) to the `mamba create` list below - that is the conda way to fix
+# bioconda) to the `conda create` list below - that is the conda way to fix
 # the "missing system lib" errors instead of apt-get + compile.
 # =============================================================================
 FROM condaforge/miniforge3:latest
 
 # ---- Core stack into a dedicated env, from conda-forge + bioconda -----------
-# Single solve so the R / Bioconductor versions stay consistent. Installed in
-# its own `deconv` env (not base) to keep conda/mamba's own Python untouched.
-RUN mamba create -y -n deconv --strict-channel-priority \
+# Single solve so the R / Bioconductor versions stay consistent (R 4.4.3 ->
+# Bioconductor 3.20). Installed in its own `deconv` env (not base) to keep
+# conda's own Python untouched.
+RUN conda create -y -n deconv --strict-channel-priority \
       -c conda-forge -c bioconda \
-      r-base \
+      "r-base=4.4.3" \
       r-optparse \
       r-jsonlite \
       r-data.table \
@@ -47,33 +48,33 @@ RUN mamba create -y -n deconv --strict-channel-priority \
       fortran-compiler \
       make \
       git \
-    && mamba clean -afy
+    && conda clean -afy
 
 # Put the env on PATH so `Rscript` is the conda R at run time (no activation
-# needed: conda R binaries use RPATH). Build steps below use `mamba run -n
+# needed: conda R binaries use RPATH). Build steps below use `conda run -n
 # deconv` so the compiler toolchain (CC/CXX/FC) is also activated.
 ENV PATH=/opt/conda/envs/deconv/bin:${PATH}
 
 # ---- Packages not available on conda ----------------------------------------
 # tidyestimate: CRAN only, pure R (no system deps -> compiles cleanly).
-RUN mamba run -n deconv R -q -e "install.packages('tidyestimate', repos='https://cloud.r-project.org')" \
- && mamba run -n deconv R -q -e "library(tidyestimate)"
+RUN conda run --no-capture-output -n deconv R -q -e "install.packages('tidyestimate', repos='https://cloud.r-project.org')" \
+ && conda run --no-capture-output -n deconv R -q -e "library(tidyestimate)"
 
 # MCPcounter: GitHub only.
-RUN mamba run -n deconv R -q -e "remotes::install_github('ebecht/MCPcounter', subdir='Source', upgrade='never', dependencies=FALSE)" \
- && mamba run -n deconv R -q -e "library(MCPcounter)"
+RUN conda run --no-capture-output -n deconv R -q -e "remotes::install_github('ebecht/MCPcounter', subdir='Source', upgrade='never', dependencies=FALSE)" \
+ && conda run --no-capture-output -n deconv R -q -e "library(MCPcounter)"
 
 # omnideconv core (resolves remaining R deps inside the conda env).
-RUN mamba run -n deconv R -q -e "pak::pkg_install('omnideconv/omnideconv')" \
- && mamba run -n deconv R -q -e "library(omnideconv)"
+RUN conda run --no-capture-output -n deconv R -q -e "pak::pkg_install('omnideconv/omnideconv')" \
+ && conda run --no-capture-output -n deconv R -q -e "library(omnideconv)"
 
 # Deconvolution backends (CDSeq compiles C++ via the conda toolchain).
-RUN mamba run -n deconv R -q -e "remotes::install_github('omnideconv/DWLS',  upgrade='never', dependencies=NA, build_vignettes=FALSE)"
-RUN mamba run -n deconv R -q -e "remotes::install_github('omnideconv/MuSiC', upgrade='never', dependencies=NA, build_vignettes=FALSE)"
-RUN mamba run -n deconv R -q -e "remotes::install_github('omnideconv/CDSeq', upgrade='never', dependencies=NA, build_vignettes=FALSE)"
+RUN conda run --no-capture-output -n deconv R -q -e "remotes::install_github('omnideconv/DWLS',  upgrade='never', dependencies=NA, build_vignettes=FALSE)"
+RUN conda run --no-capture-output -n deconv R -q -e "remotes::install_github('omnideconv/MuSiC', upgrade='never', dependencies=NA, build_vignettes=FALSE)"
+RUN conda run --no-capture-output -n deconv R -q -e "remotes::install_github('omnideconv/CDSeq', upgrade='never', dependencies=NA, build_vignettes=FALSE)"
 
 # ---- Sanity check: every library the pipeline loads must import -------------
-RUN mamba run -n deconv R -q -e "library(optparse); library(tidyestimate); library(MCPcounter); library(omnideconv); library(org.Hs.eg.db); library(Seurat); library(jsonlite); library(data.table); library(Matrix); library(ggplot2); cat('Docker image OK\\n')"
+RUN conda run --no-capture-output -n deconv R -q -e "library(optparse); library(tidyestimate); library(MCPcounter); library(omnideconv); library(org.Hs.eg.db); library(Seurat); library(jsonlite); library(data.table); library(Matrix); library(ggplot2); cat('Docker image OK\\n')"
 
 WORKDIR /app
 COPY deconv_pipeline.R /app/deconv_pipeline.R
