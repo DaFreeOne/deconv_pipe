@@ -12,7 +12,8 @@ suppressPackageStartupMessages({
   library(Matrix)
 })
 
-default_cores = parallel::detectCores(logical = FALSE)
+# Used only when --ncores is not passed (i.e. ncores left NULL/blank in the YAML)
+default_cores = parallel::detectCores(logical = TRUE)
 if (is.na(default_cores)) default_cores = 2L
 default_cores = max(1L, default_cores - 4L)
 

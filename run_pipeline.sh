@@ -36,7 +36,9 @@ with open(config_path, "r", encoding="utf-8") as f:
 val = cfg
 for k in key_path:
     val = val[k]
-if isinstance(val, bool):
+if val is None:
+    print("")
+elif isinstance(val, bool):
     print(str(val).lower())
 else:
     print(val)
@@ -115,6 +117,13 @@ run_preanalysis() {
 run_container() {
   check_paths
 
+  # ncores is optional: leave it NULL/blank in the YAML to let the container
+  # auto-detect (all logical cores - 4). When set, pass it through explicitly.
+  ncores_args=()
+  if [ -n "$NCORES" ]; then
+    ncores_args=(--ncores "$NCORES")
+  fi
+
   docker run --rm -it \
     -v "$HOST_BULK_COUNTS_DIR:$CONTAINER_BULK_COUNTS_DIR:ro" \
     -v "$HOST_BULK_TPM_DIR:$CONTAINER_BULK_TPM_DIR:ro" \
@@ -137,8 +146,8 @@ run_container() {
     --patient_col "$PATIENT_COL" \
     --downsample_n_cells "$DOWNSAMPLE_N_CELLS" \
     --downsampling_method "$DOWNSAMPLING_METHOD" \
-    --ncores "$NCORES" \
-    --seed "$SEED"
+    --seed "$SEED" \
+    "${ncores_args[@]}"
 }
 
 case "$MODE" in
