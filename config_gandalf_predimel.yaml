@@ -10,12 +10,12 @@ image_name: deconv_pipe:latest
 
 # Host paths (mounted into the container by run_pipeline.sh)
 paths:
-  bulk_counts:     /mnt/d/PREDIMEL/00_Merged_data/02_BULK/00_Unfiltered
-  bulk_TPM:        /mnt/d/PREDIMEL/00_Merged_data/02_BULK/00_Unfiltered
-  clinic_dir:      /mnt/d/PREDIMEL/00_Merged_data/01_CLINIC
-  single_cell_rds: /home/quentin/00_DATASETS/02_SingleCell/01_MELANOMA/GSE269936/GSE269936_ref_melan_sc.rds
-  signatures_dir:  /home/quentin/69_DOCKERS/OUTPUTS/SIGNATURES
-  output_dir:      /home/quentin/69_DOCKERS/OUTPUTS/RESULTS
+  bulk_counts:     /home/quentin/01_DATA/01_PREDIMEL/02_BULK/00_Unfiltered/RNAseq_counts.csv
+  bulk_TPM:        /home/quentin/01_DATA/01_PREDIMEL/02_BULK/00_Unfiltered/RNAseq_TPM.csv
+  clinic_dir:      /home/quentin/01_DATA/01_PREDIMEL/01_CLINIC
+  single_cell_rds: /home/quentin/01_DATA/00_PUBLIC_DATASETS/02_SINGLE_CELL/01_MELANOMA/GSE269936/GSE269936_ref_melan_sc.rds
+  signatures_dir:  /home/quentin/02_OUTPUTS/01_DECONVOLUTION/01_SIGNATURES
+  output_dir:      /home/quentin/02_OUTPUTS/01_DECONVOLUTION/02_RESULTS
 
 inputs:
   clinic_file: clinic_merged_riboZ_muscSS.csv
@@ -23,8 +23,8 @@ inputs:
 
 parameters:
   # Deconvolution method(s). Comma-separated for several, e.g. "DWLS,MuSiC".
-  # Supported: DWLS, MuSiC, CDSeq, ESTIMATE
-  deconv_methods: DWLS, MuSiC, CDSeq, ESTIMATE
+  # Supported: DWLS, MuSiC, CDSeq
+  deconv_methods: DWLS, MuSiC, CDSeq
 
   # DWLS signature builder: "mast_optimized" or "seurat"
   dwls_method: mast_optimized
