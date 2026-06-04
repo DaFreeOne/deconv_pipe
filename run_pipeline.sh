@@ -127,6 +127,8 @@ run_container() {
   fi
 
   docker run --rm -it \
+    --user $(id -u):$(id -g) \
+    -v $PWD:/data \
     -v "$HOST_BULK_COUNTS_DIR:$CONTAINER_BULK_COUNTS_DIR:ro" \
     -v "$HOST_BULK_TPM_DIR:$CONTAINER_BULK_TPM_DIR:ro" \
     -v "$HOST_CLINIC_DIR:$CONTAINER_CLINIC_DIR:ro" \

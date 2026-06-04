@@ -212,6 +212,19 @@ if ("DWLS" %in% deconv_to_use) {
     message(paste0("Loading preexisting ", single_cell_GSE_ID, " DWLS signature"))
     signature_DWLS = readRDS(paste0(sig_path, ".rds"))
   }
+  # --- Diagnostics for the DWLS quadratic-programming step ---
+  # solve.QP needs t(S) %*% S positive-definite; it errors ("dataset too small")
+  # when the signature has fewer genes than cell types, collinear cell-type
+  # columns (column rank < ncol), or an all-zero column. These prints show which.
+  sig_genes = intersect(rownames(signature_DWLS), rownames(bulk_tpm_mat))
+  S_chk = as.matrix(signature_DWLS[sig_genes, , drop = FALSE])
+  message(sprintf("DWLS signature: %d genes x %d cell types | %d shared with bulk | column rank %d",
+                  nrow(signature_DWLS), ncol(signature_DWLS), length(sig_genes), qr(S_chk)$rank))
+  zero_cols = colnames(S_chk)[colSums(abs(S_chk)) == 0]
+  if (length(zero_cols)) message("All-zero signature columns: ", paste(zero_cols, collapse = ", "))
+  message("Cells per cell type (after downsampling):")
+  print(sort(table(labels)))
+
   message(paste0("Running DWLS deconvolution using ", single_cell_GSE_ID))
 
   deconvolution_DWLS = omnideconv::deconvolute(
@@ -219,7 +232,8 @@ if ("DWLS" %in% deconv_to_use) {
     model = signature_DWLS,
     method = "DWLS",
     dwls_submethod = "DampenedWLS",
-    batch_ids = batch_ids
+    batch_ids = batch_ids,
+    verbose = TRUE   # surfaces the real solve.QP error instead of the generic one
   )
 
   save_rds_mkdir(deconvolution_DWLS, paste0(deconv_path, ".rds"))
@@ -242,12 +256,18 @@ if ("CDSeq" %in% deconv_to_use) {
 
   if (!file.exists(paste0(deconv_path, ".rds")) | !file.exists(paste0(deconv_path, ".csv"))) {
     message(paste0("Running CDSeq deconvolution using ", single_cell_GSE_ID))
+    # CDSeq parallelism: it splits genes into `block_number` blocks run across
+    # `no_cores` cores. Parallelism only happens when block_number > 1, so set
+    # both (one block per core). Higher block_number = more parallel units but
+    # a coarser per-block GEP estimate (CDSeq's intended speed/approx trade-off).
     deconvolution_CDSeq = omnideconv::deconvolute(
       bulk_gene_expression = bulk_counts_mat,
       single_cell_object = counts_mat,
       cell_type_annotations = labels,
       batch_ids = batch_ids,
-      method = "CDSeq"
+      method = "CDSeq",
+      no_cores = ncores,
+      block_number = ncores
     )
     save_rds_mkdir(deconvolution_CDSeq, paste0(deconv_path, ".rds"))
     write_csv_mkdir(deconvolution_CDSeq, paste0(deconv_path, ".csv"))
