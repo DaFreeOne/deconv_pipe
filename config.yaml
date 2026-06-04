@@ -41,7 +41,7 @@ parameters:
   # downsample_n_cells: max cells kept per group (groups with fewer are kept
   #   whole). NOT a global total: effective cells/celltype ~= n_groups * this.
   #   ~40 is a fast smoke-test value; 100-200 gives more stable signatures.
-  downsample_n_cells: 40
+  downsample_n_cells: 149
   downsampling_method: patientxcelltype
 
   ncores: NULL  # NULL/blank = auto-detect (all logical cores - 4, min 1); or set an integer
