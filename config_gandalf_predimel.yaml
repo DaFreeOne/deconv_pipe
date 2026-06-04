@@ -20,10 +20,11 @@ paths:
 inputs:
   clinic_file: clinic_merged_riboZ_muscSS.csv
   gse_id:      GSE269936
+  bulk_ID:     PREDIMEL_BULK
 
 parameters:
   # Deconvolution method(s). Comma-separated for several, e.g. "DWLS,MuSiC".
-  # Supported: DWLS, MuSiC, CDSeq
+  # Supported: DWLS, MuSiC, CDSeq    |||    BayesPrism, Scaden and estimate not ready yet
   deconv_methods: DWLS, MuSiC, CDSeq
 
   # DWLS signature builder: "mast_optimized" or "seurat"

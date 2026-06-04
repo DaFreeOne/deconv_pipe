@@ -31,6 +31,10 @@ RUN conda create -y -n deconv --strict-channel-priority \
       r-matrix \
       r-seurat \
       r-ggplot2 \
+      r-systemfonts \
+      r-textshaping \
+      r-ragg \
+      r-svglite \
       r-dplyr \
       r-rcpp \
       r-rcpparmadillo \
@@ -64,14 +68,35 @@ RUN conda run --no-capture-output -n deconv R -q -e "install.packages('tidyestim
 RUN conda run --no-capture-output -n deconv R -q -e "remotes::install_github('ebecht/MCPcounter', subdir='Source', upgrade='never', dependencies=FALSE)" \
  && conda run --no-capture-output -n deconv R -q -e "library(MCPcounter)"
 
-# omnideconv core (resolves remaining R deps inside the conda env).
-RUN conda run --no-capture-output -n deconv R -q -e "pak::pkg_install('omnideconv/omnideconv')" \
+# omnideconv core. upgrade=FALSE keeps the conda-provided binary deps instead
+# of recompiling newer CRAN sources (which is what failed on systemfonts).
+RUN conda run --no-capture-output -n deconv R -q -e "pak::pkg_install('omnideconv/omnideconv', upgrade = FALSE)" \
  && conda run --no-capture-output -n deconv R -q -e "library(omnideconv)"
+
+# Toolchain fixes for the GitHub-only backends compiled below:
+#  - r-rcurl as a conda binary: source-compiling RCurl (a DWLS dependency)
+#    fails to link `-lxml2` in the conda env. Installing it precompiled skips
+#    that compile entirely.
+#  - CXX11STD -> gnu++14: harmony and CDSeq declare `CXX_STD = CXX11`, but the
+#    conda RcppArmadillo (15.x) requires a C++14 compiler. Overriding the C++11
+#    standard makes those packages compile as C++14 (via Makevars.site).
+RUN conda install -y -n deconv --strict-channel-priority -c conda-forge -c bioconda r-rcurl \
+ && conda clean -afy \
+ && printf 'CXX11STD = -std=gnu++14\n' >> /opt/conda/envs/deconv/lib/R/etc/Makevars.site
 
 # Deconvolution backends (CDSeq compiles C++ via the conda toolchain).
 RUN conda run --no-capture-output -n deconv R -q -e "remotes::install_github('omnideconv/DWLS',  upgrade='never', dependencies=NA, build_vignettes=FALSE)"
 RUN conda run --no-capture-output -n deconv R -q -e "remotes::install_github('omnideconv/MuSiC', upgrade='never', dependencies=NA, build_vignettes=FALSE)"
 RUN conda run --no-capture-output -n deconv R -q -e "remotes::install_github('omnideconv/CDSeq', upgrade='never', dependencies=NA, build_vignettes=FALSE)"
+
+# BayesPrism (Danko-Lab) is pure R but pulls heavy Bioconductor deps (scran,
+# BiocParallel) + NMF/snowfall/gplots; install those as conda binaries first,
+# then the package itself from GitHub.
+RUN conda install -y -n deconv --strict-channel-priority -c conda-forge -c bioconda \
+      bioconductor-scran bioconductor-biocparallel r-nmf r-snowfall r-gplots \
+ && conda clean -afy \
+ && conda run --no-capture-output -n deconv R -q -e "remotes::install_github('Danko-Lab/BayesPrism', subdir='BayesPrism', upgrade='never', dependencies=NA, build_vignettes=FALSE)" \
+ && conda run --no-capture-output -n deconv R -q -e "library(BayesPrism)"
 
 # ---- Sanity check: every library the pipeline loads must import -------------
 RUN conda run --no-capture-output -n deconv R -q -e "library(optparse); library(tidyestimate); library(MCPcounter); library(omnideconv); library(org.Hs.eg.db); library(Seurat); library(jsonlite); library(data.table); library(Matrix); library(ggplot2); cat('Docker image OK\\n')"

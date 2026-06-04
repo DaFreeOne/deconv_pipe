@@ -56,6 +56,7 @@ HOST_OUTPUT_DIR="$(read_yaml paths.output_dir)"
 
 CLINIC_FILE="$(read_yaml inputs.clinic_file)"
 GSE_ID="$(read_yaml inputs.gse_id)"
+BULK_ID="$(read_yaml inputs.bulk_ID)"
 
 DECONV_METHODS="$(read_yaml parameters.deconv_methods)"
 DWLS_METHOD="$(read_yaml parameters.dwls_method)"
@@ -74,8 +75,8 @@ CONTAINER_SIGNATURES_DIR="/work/signatures"
 CONTAINER_OUTPUT_DIR="/work/output"
 
 check_paths() {
-  [ -d "$HOST_BULK_COUNTS_DIR" ]      || { echo "Missing bulk_counts dir: $HOST_BULK_COUNTS_DIR"; exit 1; }
-  [ -d "$HOST_BULK_TPM_DIR" ]      || { echo "Missing bulk_TPM dir: $HOST_BULK_TPM_DIR"; exit 1; }
+  [ -f "$HOST_BULK_COUNTS_DIR" ]      || { echo "Missing bulk_counts dir: $HOST_BULK_COUNTS_DIR"; exit 1; }
+  [ -f "$HOST_BULK_TPM_DIR" ]      || { echo "Missing bulk_TPM dir: $HOST_BULK_TPM_DIR"; exit 1; }
   [ -d "$HOST_CLINIC_DIR" ]      || { echo "Missing clinic_dir: $HOST_CLINIC_DIR"; exit 1; }
   [ -f "$HOST_SINGLE_CELL_RDS" ] || { echo "Missing single_cell_rds: $HOST_SINGLE_CELL_RDS"; exit 1; }
 
@@ -110,6 +111,7 @@ run_preanalysis() {
     --celltype_col "$CELLTYPE_COL" \
     --patient_col "$PATIENT_COL" \
     --gse_id "$GSE_ID" \
+    --bulk_ID "$BULK_ID" \
     --current_cap "$DOWNSAMPLE_N_CELLS" \
     --output_dir "$CONTAINER_OUTPUT_DIR"
 }
@@ -138,6 +140,7 @@ run_container() {
     --clinic_file "$CLINIC_FILE" \
     --single_cell_rds "$CONTAINER_SC_DIR/$(basename "$HOST_SINGLE_CELL_RDS")" \
     --gse_id "$GSE_ID" \
+    --bulk_ID "$BULK_ID" \
     --signatures_dir "$CONTAINER_SIGNATURES_DIR" \
     --output_dir "$CONTAINER_OUTPUT_DIR" \
     --deconv_methods "$DECONV_METHODS" \
