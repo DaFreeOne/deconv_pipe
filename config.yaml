@@ -24,8 +24,8 @@ inputs:
 
 parameters:
   # Deconvolution method(s). Comma-separated for several, e.g. "DWLS,MuSiC".
-  # Supported: DWLS, MuSiC, CDSeq, Scaden, BayesPrism
-  deconv_methods: DWLS, MuSiC, CDSeq, Scaden, BayesPrism
+  # Supported: DWLS, MuSiC, CDSeq    |||    BayesPrism, Scaden and estimate not ready yet
+  deconv_methods: DWLS, MuSiC, CDSeq
 
   # DWLS signature builder: "mast_optimized" or "seurat"
   dwls_method: mast_optimized
