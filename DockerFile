@@ -68,10 +68,21 @@ RUN conda run --no-capture-output -n deconv R -q -e "install.packages('tidyestim
 RUN conda run --no-capture-output -n deconv R -q -e "remotes::install_github('ebecht/MCPcounter', subdir='Source', upgrade='never', dependencies=FALSE)" \
  && conda run --no-capture-output -n deconv R -q -e "library(MCPcounter)"
 
+# omnideconv's .onLoad installs a private miniconda under $HOME (for its Python
+# methods, which this pipeline does not use) and FAILS if $HOME isn't writable --
+# some hosts launch the container as a non-root user with HOME=/, so it tries to
+# write //.local and dies. Pin that miniconda to a fixed, world-writable path
+# independent of HOME/user, so .onLoad finds it at runtime no matter who (root or
+# not) launches the container, and never tries to reinstall.
+ENV HOME=/opt/omnideconv-home
+ENV RETICULATE_MINICONDA_PATH=/opt/omnideconv-home/.local/share/r-miniconda
+RUN mkdir -p /opt/omnideconv-home && chmod 777 /opt/omnideconv-home
+
 # omnideconv core. upgrade=FALSE keeps the conda-provided binary deps instead
 # of recompiling newer CRAN sources (which is what failed on systemfonts).
 RUN conda run --no-capture-output -n deconv R -q -e "pak::pkg_install('omnideconv/omnideconv', upgrade = FALSE)" \
- && conda run --no-capture-output -n deconv R -q -e "library(omnideconv)"
+ && conda run --no-capture-output -n deconv R -q -e "library(omnideconv)" \
+ && chmod -R 777 /opt/omnideconv-home
 
 # Toolchain fixes for the GitHub-only backends compiled below:
 #  - r-rcurl as a conda binary: source-compiling RCurl (a DWLS dependency)
