@@ -6,7 +6,7 @@
 #   ./run_pipeline.sh run   config.yaml   # run the pipeline
 # ============================================================================
 
-image_name: deconv_pipe:latest
+image_name: qtea1/deconv_pipe:latest
 
 # Host paths (mounted into the container by run_pipeline.sh)
 paths:
