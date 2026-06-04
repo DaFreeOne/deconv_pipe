@@ -126,8 +126,10 @@ run_container() {
     ncores_args=(--ncores "$NCORES")
   fi
 
+  # No --user: under rootless Docker, container-root already maps to your host
+  # user, so output files are owned by you AND writable. Adding --user would run
+  # as a subordinate uid that can't write your own bind-mounted dirs.
   docker run --rm -it \
-    --user $(id -u):$(id -g) \
     -v $PWD:/data \
     -v "$HOST_BULK_COUNTS_DIR:$CONTAINER_BULK_COUNTS_DIR:ro" \
     -v "$HOST_BULK_TPM_DIR:$CONTAINER_BULK_TPM_DIR:ro" \
