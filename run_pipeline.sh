@@ -126,10 +126,18 @@ run_container() {
     ncores_args=(--ncores "$NCORES")
   fi
 
+  # Per-run log file next to run_config_<gse>.json in the output dir. It is
+  # written host-side by `tee` below, so it is owned by you and captures every
+  # line the container prints (stdout + stderr). Timestamped so re-runs don't
+  # overwrite previous logs.
+  local container_name="bulk_deconv_pipeline"
+  local log_file="$HOST_OUTPUT_DIR/run_log_${GSE_ID}_$(date +%Y%m%d-%H%M%S).log"
+
   # No --user: under rootless Docker, container-root already maps to your host
   # user, so output files are owned by you AND writable. Adding --user would run
   # as a subordinate uid that can't write your own bind-mounted dirs.
-  docker run --rm -it \
+  docker run -d --rm \
+    --name "$container_name" \
     -v $PWD:/data \
     -v "$HOST_BULK_COUNTS_DIR:$CONTAINER_BULK_COUNTS_DIR:ro" \
     -v "$HOST_BULK_TPM_DIR:$CONTAINER_BULK_TPM_DIR:ro" \
@@ -155,6 +163,13 @@ run_container() {
     --downsampling_method "$DOWNSAMPLING_METHOD" \
     --seed "$SEED" \
     "${ncores_args[@]}"
+
+  echo "Pipeline running detached as container '$container_name'."
+  echo "Streaming output to the terminal and to: $log_file"
+  # Mirror all container output (stdout + stderr) to the terminal AND the log
+  # file. Blocks until the pipeline finishes; Ctrl-C only stops following -- the
+  # container keeps running (reattach with: docker logs -f $container_name).
+  docker logs -f "$container_name" 2>&1 | tee "$log_file" || true
 }
 
 case "$MODE" in
