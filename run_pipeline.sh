@@ -133,11 +133,19 @@ run_container() {
   local container_name="bulk_deconv_pipeline"
   local log_file="$HOST_OUTPUT_DIR/run_log_${GSE_ID}_$(date +%Y%m%d-%H%M%S).log"
 
-  # No --user: under rootless Docker, container-root already maps to your host
-  # user, so output files are owned by you AND writable. Adding --user would run
-  # as a subordinate uid that can't write your own bind-mounted dirs.
+  # Make output files owned by *you* (so you can delete them) on either setup:
+  #  - rootless Docker: container-root already maps to your host user -> NO --user
+  #    (adding it would run as a subordinate uid that can't write your own dirs).
+  #  - rootful  Docker: container-root is real root -> run as you via --user so
+  #    the output files aren't owned by root.
+  user_args=()
+  if ! docker info -f '{{.SecurityOptions}}' 2>/dev/null | grep -q 'rootless'; then
+    user_args=(--user "$(id -u):$(id -g)")
+  fi
+
   docker run -d --rm \
     --name "$container_name" \
+    "${user_args[@]}" \
     -v $PWD:/data \
     -v "$HOST_BULK_COUNTS_DIR:$CONTAINER_BULK_COUNTS_DIR:ro" \
     -v "$HOST_BULK_TPM_DIR:$CONTAINER_BULK_TPM_DIR:ro" \

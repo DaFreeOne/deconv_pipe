@@ -15,3 +15,7 @@ To save the docker image (if you later want to export it) :
 
 And then to load the .tar to another machine's docker :
 > docker image load -i predimel-deconv.tar
+
+copy to or from remote :
+> rsync -avz quentin@remote_ip:/remote/path /local/path
+

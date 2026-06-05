@@ -256,18 +256,25 @@ if ("CDSeq" %in% deconv_to_use) {
 
   if (!file.exists(paste0(deconv_path, ".rds")) | !file.exists(paste0(deconv_path, ".csv"))) {
     message(paste0("Running CDSeq deconvolution using ", single_cell_GSE_ID))
-    # CDSeq parallelism: it splits genes into `block_number` blocks run across
-    # `no_cores` cores. Parallelism only happens when block_number > 1, so set
-    # both (one block per core). Higher block_number = more parallel units but
-    # a coarser per-block GEP estimate (CDSeq's intended speed/approx trade-off).
+    # CDSeq only parallelizes via "reduce-recovery": it runs `block_number` blocks
+    # of `gene_subset_size` randomly-sampled genes across `no_cores` cores, then
+    # reconstructs the result. block_number > 1 REQUIRES gene_subset_size, and the
+    # output is an APPROXIMATION of the exact (block_number = 1) run. We use one
+    # block per core and size each block so genes are covered ~3x on average (good
+    # reconstruction). For an exact but single-threaded run, set cdseq_block_number = 1.
+    n_genes_cdseq      = nrow(bulk_counts_mat)
+    cdseq_block_number = max(1L, ncores)
+    cdseq_gene_subset  = min(n_genes_cdseq,
+                             as.integer(ceiling(3 * n_genes_cdseq / cdseq_block_number)))
     deconvolution_CDSeq = omnideconv::deconvolute(
-      bulk_gene_expression = bulk_counts_mat,
-      single_cell_object = counts_mat,
+      bulk_gene_expression  = bulk_counts_mat,
+      single_cell_object    = counts_mat,
       cell_type_annotations = labels,
-      batch_ids = batch_ids,
-      method = "CDSeq",
-      no_cores = ncores,
-      block_number = ncores
+      batch_ids             = batch_ids,
+      method                = "CDSeq",
+      no_cores              = ncores,
+      block_number          = cdseq_block_number,
+      gene_subset_size      = cdseq_gene_subset
     )
     save_rds_mkdir(deconvolution_CDSeq, paste0(deconv_path, ".rds"))
     write_csv_mkdir(deconvolution_CDSeq, paste0(deconv_path, ".csv"))
