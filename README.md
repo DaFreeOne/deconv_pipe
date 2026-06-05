@@ -1,6 +1,6 @@
 To build the docker, run : 
 > chmod +x run_pipeline.sh
-> nohup ./run_pipeline.sh build config.yaml
+> ./run_pipeline.sh build config.yaml
 
 or the classic : 
 > docker build . blablabla
@@ -8,7 +8,7 @@ or the classic :
 
 
 To run the docker, run :
-> ./run_pipeline.sh run config.yaml
+> nohup ./run_pipeline.sh run config.yaml
 
 To save the docker image (if you later want to export it) : 
 > docker image save -o predimel-deconv.tar predimel-deconv:latest
