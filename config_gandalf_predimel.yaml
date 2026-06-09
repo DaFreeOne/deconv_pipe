@@ -44,5 +44,5 @@ parameters:
   downsample_n_cells: 200
   downsampling_method: patientxcelltype
 
-  ncores: NULL  # NULL/blank = auto-detect (all logical cores - 4, min 1); or set an integer
+  ncores: 16  # NULL/blank = auto-detect (all logical cores - 4, min 1); or set an integer
   seed:   1984
